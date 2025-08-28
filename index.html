@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local AI Assistant</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
+        #chat-container { width: 450px; height: 650px; border: 1px solid #ccc; border-radius: 8px; display: flex; flex-direction: column; background-color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #chat-box { flex-grow: 1; padding: 15px; overflow-y: auto; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; gap: 12px; }
+        .message { padding: 10px 15px; border-radius: 18px; max-width: 80%; line-height: 1.4; }
+        .user { background-color: #0084ff; color: white; align-self: flex-end; }
+        .assistant { background-color: #e4e6eb; color: black; align-self: flex-start; }
+        .loading { color: #888; align-self: center; }
+        #input-container { display: flex; padding: 10px; }
+        #user-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 18px; padding: 10px 15px; font-size: 16px; }
+        #send-btn { background-color: #0084ff; color: white; border: none; border-radius: 50%; width: 44px; height: 44px; margin-left: 10px; cursor: pointer; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-box">
+            <div class="message assistant">Halo! Saya adalah asisten AI yang berjalan di komputer Anda. Silakan bertanya.</div>
+        </div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Ketik pesan Anda...">
+            <button id="send-btn">➤</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatBox = document.getElementById('chat-box');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+
+            const addMessage = (text, sender) => {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', sender);
+                messageElement.textContent = text;
+                chatBox.appendChild(messageElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                return messageElement;
+            };
+
+            const sendMessage = async () => {
+                const messageText = userInput.value.trim();
+                if (messageText === '') return;
+
+                addMessage(messageText, 'user');
+                userInput.value = '';
+                const loadingElement = addMessage('...', 'loading');
+
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: messageText }),
+                    });
+
+                    chatBox.removeChild(loadingElement);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    addMessage(data.reply, 'assistant');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Maaf, terjadi kesalahan. Pastikan backend dan Ollama sudah berjalan.', 'assistant');
+                }
+            };
+
+            sendBtn.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
